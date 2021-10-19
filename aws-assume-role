@@ -1,0 +1,62 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" == "" ]; then
+  echo "please use as 'aws-assume-role XXXXXX[6-digit-number] (account) (region) (rolename)'"
+  exit
+else
+  mfa=$1
+fi
+if [ "$2" != "" ]; then
+  account=$2
+else
+  account="000000000000"
+fi
+if [ "$3" != "" ]; then
+  region=$3
+else
+  region="ap-northeast-1"
+fi
+if [ "$4" != "" ]; then
+  rolename=$4
+else
+  rolename="RoleName"
+fi
+
+echo "account = $account"
+echo "region = $region"
+
+mfacmd="aws sts get-session-token"
+mfacmd="$mfacmd --serial-number arn:aws:iam::111111111111:mfa/UserName"
+mfacmd="$mfacmd --token-code $mfa"
+
+mfacreds=`$mfacmd`
+
+mfa_access_key_id=$(echo $mfacreds | jq --raw-output .Credentials.AccessKeyId)
+mfa_secret_access_key=$(echo $mfacreds | jq --raw-output .Credentials.SecretAccessKey)
+mfa_session_token=$(echo $mfacreds | jq --raw-output .Credentials.SessionToken)
+
+aws configure set region $region --profile mfa
+aws configure set aws_access_key_id $mfa_access_key_id --profile mfa
+aws configure set aws_secret_access_key $mfa_secret_access_key --profile mfa
+aws configure set aws_session_token $mfa_session_token --profile mfa
+
+aws configure list --profile mfa
+
+cmd="aws sts assume-role --profile mfa"
+cmd="$cmd --role-arn arn:aws:iam::${account}:role/$rolename"
+cmd="$cmd --role-session-name UserName"
+
+creds=`$cmd`
+
+access_key_id=$(echo $creds | jq --raw-output .Credentials.AccessKeyId)
+secret_access_key=$(echo $creds | jq --raw-output .Credentials.SecretAccessKey)
+session_token=$(echo $creds | jq --raw-output .Credentials.SessionToken)
+
+aws configure set region $region --profile $rolename
+aws configure set aws_access_key_id $access_key_id --profile $rolename
+aws configure set aws_secret_access_key $secret_access_key --profile $rolename
+aws configure set aws_session_token $session_token --profile $rolename
+
+aws configure list --profile $rolename
