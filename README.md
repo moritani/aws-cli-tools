@@ -6,5 +6,6 @@ aws-assume-role-with-mfa: [mfa]のCredentialsを利用して別アカウント�
 
 aws-assume-role: 上記2つを一度に実行する
 
-
 aws-assume-role-without-mfa: MFAを利用せずに別アカウントのAWS CLI用Credentialsを[RoleName]にセットする
+
+※12桁のAWSアカウントIDやUserNameは自身の値やデフォルトで設定したい値を適切に設定すること
